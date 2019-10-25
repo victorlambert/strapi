@@ -1,0 +1,16 @@
+{
+  "info": {
+    "name": "openingtimes",
+    "description": ""
+  },
+  "connection": "default",
+  "collectionName": "components_openingtimes",
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "time": {
+      "type": "string"
+    }
+  }
+}
