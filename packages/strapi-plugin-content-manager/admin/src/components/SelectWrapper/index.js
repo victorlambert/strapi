@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { isArray, isEmpty } from 'lodash';
 import { request } from 'strapi-helper-plugin';
 
@@ -24,14 +24,9 @@ function SelectWrapper({
   plugin,
   value,
 }) {
-  const {
-    addRelation,
-    moveRelation,
-    onChange,
-    onRemove,
-    pathname,
-    search,
-  } = useEditView();
+  const { pathname, search } = useLocation();
+  const { addRelation, moveRelation, onChange, onRemove } = useEditView();
+
   const source = isEmpty(plugin) ? 'content-manager' : plugin;
   const [state, setState] = useState({
     _q: '',
