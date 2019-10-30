@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef, memo } from 'react';
 import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
@@ -60,6 +61,7 @@ function SelectWrapper({
         params: params,
         signal,
       });
+
       const formattedData = data.map(obj => {
         return { value: obj, label: obj[mainField] };
       });
@@ -98,7 +100,7 @@ function SelectWrapper({
     return () => {
       abortController.abort();
     };
-  }, [abortController, ref]);
+  }, [ref]);
 
   useEffect(() => {
     if (state._q !== '') {
@@ -108,7 +110,7 @@ function SelectWrapper({
     return () => {
       abortController.abort();
     };
-  }, [abortController, state._q]);
+  }, [state._q]);
 
   useEffect(() => {
     if (state._start !== 0) {
@@ -118,7 +120,7 @@ function SelectWrapper({
     return () => {
       abortController.abort();
     };
-  }, [abortController, state._start]);
+  }, [state._start]);
 
   const onInputChange = (inputValue, { action }) => {
     if (action === 'input-change') {
