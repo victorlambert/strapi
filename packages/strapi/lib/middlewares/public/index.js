@@ -5,9 +5,11 @@
  */
 
 // Node.js core.
+const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
 const koaStatic = require('koa-static');
+const stream = require('stream');
 
 /**
  * Public assets hook
@@ -28,18 +30,22 @@ module.exports = strapi => {
           strapi.config.paths.static
       );
 
+      // Open the file.
+      const index = fs.readFileSync(path.join(staticDir, 'index.html'), 'utf8');
+
       // Serve /public index page.
-      strapi.router.get(
-        '/',
-        async (ctx, next) => {
-          ctx.url = path.basename(`${ctx.url}/index.html`);
-          await next();
-        },
-        koaStatic(staticDir, {
-          maxage: maxAge,
-          defer: true,
-        })
-      );
+      strapi.router.get('/', async ctx => {
+        ctx.url = path.basename(`${ctx.url}/index.html`);
+        // Template the expressions.
+        const templatedIndex = this.template(index);
+        // Open stream to serve the file.
+        const filestream = new stream.PassThrough();
+        filestream.end(Buffer.from(templatedIndex));
+
+        // Serve static.
+        ctx.type = 'html';
+        ctx.body = filestream;
+      });
 
       // Match every route with an extension.
       // The file without extension will not be served.
@@ -113,6 +119,28 @@ module.exports = strapi => {
           defer: true,
         })
       );
+    },
+
+    template: data => {
+      // Allowed expressions to avoid data leaking.
+      const allowedExpression = [
+        'strapi.config.info.version',
+        'strapi.config.info.name',
+        'strapi.config.admin.url',
+      ];
+
+      // Templating function.
+      const templatedIndex = data.replace(/{%(.*?)%}/g, expression => {
+        const sanitizedExpression = expression.replace(/{% | %}/g, '');
+
+        if (allowedExpression.includes(sanitizedExpression)) {
+          return _.get(strapi, sanitizedExpression.replace('strapi.', ''), '');
+        }
+
+        return '';
+      });
+
+      return templatedIndex;
     },
   };
 };
