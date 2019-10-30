@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import { Link, useLocation } from 'react-router-dom';
-import { get, isArray, isEmpty } from 'lodash';
+import { get, isArray, isEmpty, cloneDeep } from 'lodash';
 import { request } from 'strapi-helper-plugin';
 import pluginId from '../../pluginId';
 import useDataManager from '../../hooks/useDataManager';
@@ -40,12 +40,15 @@ function SelectWrapper({
   });
   const [options, setOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const abortController = new AbortController();
+  const { signal } = abortController;
   const ref = useRef();
   const startRef = useRef();
   startRef.current = state._start;
 
-  ref.current = async (signal, params = state) => {
+  ref.current = async () => {
     try {
+      const params = cloneDeep(state);
       const requestUrl = `/${pluginId}/explorer/${targetModel}`;
 
       if (isEmpty(params._q)) {
@@ -90,34 +93,50 @@ function SelectWrapper({
   };
 
   useEffect(() => {
-    const abortController = new AbortController();
-    const { signal } = abortController;
-    ref.current(signal);
+    ref.current();
 
     return () => {
       abortController.abort();
     };
-  }, [ref]);
+  }, [abortController, ref]);
 
-  const onInputChange = inputValue => {
-    setState(prevState => {
-      if (prevState._q === inputValue) {
-        return prevState;
-      }
+  useEffect(() => {
+    if (state._q !== '') {
+      ref.current();
+    }
 
-      return { ...prevState, _q: inputValue };
-    });
+    return () => {
+      abortController.abort();
+    };
+  }, [abortController, state._q]);
 
-    ref.current();
+  useEffect(() => {
+    if (state._start !== 0) {
+      ref.current();
+    }
+
+    return () => {
+      abortController.abort();
+    };
+  }, [abortController, state._start]);
+
+  const onInputChange = (inputValue, { action }) => {
+    if (action === 'input-change') {
+      setState(prevState => {
+        if (prevState._q === inputValue) {
+          return prevState;
+        }
+        return { ...prevState, _q: inputValue };
+      });
+    }
 
     return inputValue;
   };
 
   const onMenuScrollToBottom = () => {
     setState(prevState => ({ ...prevState, _start: prevState._start + 1 }));
-
-    ref.current();
   };
+
   const isSingle = [
     'oneWay',
     'oneToOne',
