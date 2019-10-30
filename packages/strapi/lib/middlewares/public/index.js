@@ -31,11 +31,16 @@ module.exports = strapi => {
       );
 
       // Open the file.
-      const index = fs.readFileSync(path.join(staticDir, 'index.html'), 'utf8');
+      const filename =
+        strapi.config.environment === 'development' ? 'index' : 'production';
+      const index = fs.readFileSync(
+        path.join(staticDir, `${filename}.html`),
+        'utf8'
+      );
 
-      // Serve /public index page.
-      strapi.router.get('/', async ctx => {
-        ctx.url = path.basename(`${ctx.url}/index.html`);
+      const serveDynamicFiles = async ctx => {
+        ctx.url = path.basename(`${ctx.url}/${filename}.html`);
+        console.log(ctx.url);
         // Template the expressions.
         const templatedIndex = this.template(index);
         // Open stream to serve the file.
@@ -45,7 +50,11 @@ module.exports = strapi => {
         // Serve static.
         ctx.type = 'html';
         ctx.body = filestream;
-      });
+      };
+
+      // Serve /public index page.
+      strapi.router.get('/', serveDynamicFiles);
+      strapi.router.get('/(index.html|production.html)', serveDynamicFiles);
 
       // Match every route with an extension.
       // The file without extension will not be served.
@@ -127,13 +136,17 @@ module.exports = strapi => {
         'strapi.config.info.version',
         'strapi.config.info.name',
         'strapi.config.admin.url',
+        'strapi.config.environment',
+        'server.time',
       ];
 
       // Templating function.
       const templatedIndex = data.replace(/{%(.*?)%}/g, expression => {
         const sanitizedExpression = expression.replace(/{% | %}/g, '');
 
-        if (allowedExpression.includes(sanitizedExpression)) {
+        if (sanitizedExpression === 'server.time') {
+          return new Date().toUTCString();
+        } else if (allowedExpression.includes(sanitizedExpression)) {
           return _.get(strapi, sanitizedExpression.replace('strapi.', ''), '');
         }
 
