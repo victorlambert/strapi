@@ -25,7 +25,7 @@ describe.each([
     });
 
     await modelsUtils.createModelWithType('withcomponent', 'component', {
-      component: 'somecomponent',
+      component: 'default.somecomponent',
       repeatable: true,
       required: false,
       min: 1,
@@ -38,7 +38,7 @@ describe.each([
   }, 60000);
 
   afterAll(async () => {
-    await modelsUtils.deleteComponent('somecomponent');
+    await modelsUtils.deleteComponent('default.somecomponent');
     await modelsUtils.deleteModel('withcomponent');
   }, 60000);
 

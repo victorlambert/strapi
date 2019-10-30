@@ -7,7 +7,10 @@
   },
   "options": {
     "increments": true,
-    "timestamps": ["created_at", "updated_at"],
+    "timestamps": [
+      "created_at",
+      "updated_at"
+    ],
     "comment": ""
   },
   "attributes": {
@@ -35,19 +38,28 @@
       "collection": "category"
     },
     "price_range": {
-      "enum": ["very_cheap", "cheap", "average", "expensive", "very_expensive"],
+      "enum": [
+        "very_cheap",
+        "cheap",
+        "average",
+        "expensive",
+        "very_expensive"
+      ],
       "type": "enumeration"
     },
     "body": {
       "type": "dynamiczone",
-      "components": ["closingperiod", "restaurantservice"]
+      "components": [
+        "default.closingperiod",
+        "default.restaurantservice"
+      ]
     },
     "description": {
       "type": "richtext",
       "required": true
     },
     "opening_times": {
-      "component": "openingtimes",
+      "component": "default.openingtimes",
       "type": "component",
       "required": true,
       "repeatable": true,
@@ -55,11 +67,11 @@
       "max": 10
     },
     "closing_period": {
-      "component": "closingperiod",
+      "component": "default.closingperiod",
       "type": "component"
     },
     "services": {
-      "component": "restaurantservice",
+      "component": "default.restaurantservice",
       "required": true,
       "repeatable": true,
       "type": "component"

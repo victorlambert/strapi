@@ -8,7 +8,25 @@ const { isValidName, isValidKey } = require('./common');
 const getTypeValidator = require('./types');
 const getRelationValidator = require('./relations');
 
-module.exports = data => {
+const validateComponentInput = data => {
+  return componentSchema
+    .validate(data, {
+      strict: true,
+      abortEarly: false,
+    })
+    .catch(error => Promise.reject(formatYupErrors(error)));
+};
+
+const validateUpdateComponentInput = data => {
+  // convert zero length string on default attributes to undefined
+  if (_.has(data, 'attributes')) {
+    Object.keys(data.attributes).forEach(attribute => {
+      if (data.attributes[attribute].default === '') {
+        data.attributes[attribute].default = undefined;
+      }
+    });
+  }
+
   return componentSchema
     .validate(data, {
       strict: true,
@@ -22,8 +40,16 @@ const componentSchema = yup
     name: yup
       .string()
       .min(1)
-      .test(isValidName)
       .required('name.required'),
+    icon: yup
+      .string()
+      .test(isValidName)
+      .required('icon.required'),
+    category: yup
+      .string()
+      .min(3)
+      .test(isValidName)
+      .required('category.required'),
     description: yup.string(),
     connection: yup.string(),
     collectionName: yup
@@ -61,3 +87,8 @@ const componentSchema = yup
     }),
   })
   .noUnknown();
+
+module.exports = {
+  validateComponentInput,
+  validateUpdateComponentInput,
+};
