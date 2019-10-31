@@ -11,6 +11,8 @@ const _ = require('lodash');
 const koaStatic = require('koa-static');
 const stream = require('stream');
 
+const utils = require('../../utils');
+
 /**
  * Public assets hook
  */
@@ -40,9 +42,11 @@ module.exports = strapi => {
 
       const serveDynamicFiles = async ctx => {
         ctx.url = path.basename(`${ctx.url}/${filename}.html`);
-        console.log(ctx.url);
+
+        const isInitialised = await utils.isInitialised(strapi);
+
         // Template the expressions.
-        const templatedIndex = this.template(index);
+        const templatedIndex = await this.template(index, isInitialised);
         // Open stream to serve the file.
         const filestream = new stream.PassThrough();
         filestream.end(Buffer.from(templatedIndex));
@@ -130,7 +134,7 @@ module.exports = strapi => {
       );
     },
 
-    template: data => {
+    template: async (data, isInitialised) => {
       // Allowed expressions to avoid data leaking.
       const allowedExpression = [
         'strapi.config.info.version',
@@ -138,19 +142,30 @@ module.exports = strapi => {
         'strapi.config.admin.url',
         'strapi.config.environment',
         'server.time',
+        'isInitialised',
       ];
 
       // Templating function.
       const templatedIndex = data.replace(/{%(.*?)%}/g, expression => {
-        const sanitizedExpression = expression.replace(/{% | %}/g, '');
+        const sanitizedExpression = expression.replace(/{% |{%|%}| %}/g, '');
 
-        if (sanitizedExpression === 'server.time') {
-          return new Date().toUTCString();
-        } else if (allowedExpression.includes(sanitizedExpression)) {
-          return _.get(strapi, sanitizedExpression.replace('strapi.', ''), '');
+        switch (sanitizedExpression) {
+          case 'server.time':
+            return new Date().toUTCString();
+          case 'isInitialised':
+            return isInitialised;
+          default: {
+            if (allowedExpression.includes(sanitizedExpression)) {
+              return _.get(
+                strapi,
+                sanitizedExpression.replace('strapi.', ''),
+                ''
+              );
+            }
+
+            return '';
+          }
         }
-
-        return '';
       });
 
       return templatedIndex;
