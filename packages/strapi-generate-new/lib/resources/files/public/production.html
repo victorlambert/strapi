@@ -17,11 +17,11 @@
       <h1><img class="logo" src="https://strapi.io/assets/images/logo_login.png" /></h1>
       <div class="informations">
         <div>
-          <span class="environment">{% strapi.config.environment %}</span>
+          <span class="environment"><%= strapi.config.environment %></span>
           <p>The server is running successfully.</p>
         </div>
         <div class="text-align-right">
-          <p>{% server.time %}</p>
+          <p><%= serverTime %></p>
         </div>
       </div>
     </section>

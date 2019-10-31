@@ -141,34 +141,32 @@ module.exports = strapi => {
         'strapi.config.info.name',
         'strapi.config.admin.url',
         'strapi.config.environment',
-        'server.time',
+        'serverTime',
         'isInitialised',
       ];
 
-      // Templating function.
-      const templatedIndex = data.replace(/{%(.*?)%}/g, expression => {
-        const sanitizedExpression = expression.replace(/{% |{%|%}| %}/g, '');
+      // Populate values to object.
+      const objectWithValues = allowedExpression.reduce((acc, key) => {
+        switch (key) {
+          case 'serverTime':
+            acc[key] = new Date().toUTCString();
 
-        switch (sanitizedExpression) {
-          case 'server.time':
-            return new Date().toUTCString();
+            break;
           case 'isInitialised':
-            return isInitialised;
-          default: {
-            if (allowedExpression.includes(sanitizedExpression)) {
-              return _.get(
-                strapi,
-                sanitizedExpression.replace('strapi.', ''),
-                ''
-              );
-            }
+            acc[key] = isInitialised;
 
-            return '';
+            break;
+          default: {
+            acc[key] = _.get(strapi, key.replace('strapi.', ''), '');
           }
         }
-      });
 
-      return templatedIndex;
+        return acc;
+      }, {});
+
+      const templatedIndex = _.template(data);
+
+      return templatedIndex(objectWithValues);
     },
   };
 };
