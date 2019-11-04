@@ -23,7 +23,7 @@ module.exports = strapi => {
      * Initialize the hook
      */
 
-    initialize() {
+    async initialize() {
       const { maxAge } = strapi.config.middleware.settings.public;
 
       const staticDir = path.resolve(
@@ -40,13 +40,15 @@ module.exports = strapi => {
         'utf8'
       );
 
+      // Is the project initialized?
+      const isInitialised = await utils.isInitialised(strapi);
+
+      // Template the expressions.
+      const templatedIndex = await this.template(index, isInitialised);
+
       const serveDynamicFiles = async ctx => {
         ctx.url = path.basename(`${ctx.url}/${filename}.html`);
 
-        const isInitialised = await utils.isInitialised(strapi);
-
-        // Template the expressions.
-        const templatedIndex = await this.template(index, isInitialised);
         // Open stream to serve the file.
         const filestream = new stream.PassThrough();
         filestream.end(Buffer.from(templatedIndex));
@@ -137,10 +139,10 @@ module.exports = strapi => {
     template: async (data, isInitialised) => {
       // Allowed expressions to avoid data leaking.
       const allowedExpression = [
-        'strapi.config.info.version',
-        'strapi.config.info.name',
-        'strapi.config.admin.url',
-        'strapi.config.environment',
+        'config.info.version',
+        'config.info.name',
+        'config.admin.url',
+        'config.environment',
         'serverTime',
         'isInitialised',
       ];
@@ -157,7 +159,7 @@ module.exports = strapi => {
 
             break;
           default: {
-            acc[key] = _.get(strapi, key.replace('strapi.', ''), '');
+            acc[key] = _.get(strapi, key, '');
           }
         }
 
