@@ -115,7 +115,10 @@ const EditView = ({
     });
   }, [currentContentTypeLayout, currentContentTypeSchema.attributes]);
 
-  const { formattedContentTypeLayout } = reducerState.toJS();
+  const {
+    formattedContentTypeLayout,
+    isDraggingComponent,
+  } = reducerState.toJS();
 
   // We can't use the getQueryParameters helper here because the search
   // can contain 'redirectUrl' several times since we can navigate between documents
@@ -129,6 +132,17 @@ const EditView = ({
     <EditViewProvider
       allLayoutData={allLayoutData}
       layout={currentContentTypeLayoutData}
+      isDraggingComponent={isDraggingComponent}
+      setIsDraggingComponent={() => {
+        dispatch({
+          type: 'SET_IS_DRAGGING_COMPONENT',
+        });
+      }}
+      unsetIsDraggingComponent={() => {
+        dispatch({
+          type: 'UNSET_IS_DRAGGING_COMPONENT',
+        });
+      }}
     >
       <EditViewDataManagerProvider
         allLayoutData={allLayoutData}
