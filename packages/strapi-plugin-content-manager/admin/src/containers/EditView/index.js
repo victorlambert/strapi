@@ -20,7 +20,7 @@ import SelectWrapper from '../../components/SelectWrapper';
 import EditViewDataManagerProvider from '../EditViewDataManagerProvider';
 import EditViewProvider from '../EditViewProvider';
 import Header from './Header';
-import getInjectedComponents from './utils/getComponents';
+import getInjectedComponents from '../../utils/getComponents';
 import init from './init';
 import reducer, { initialState } from './reducer';
 import { LinkWrapper, SubWrapper } from './components';
@@ -152,7 +152,7 @@ const EditView = ({
         <BackHeader onClick={() => redirectToPreviousPage()} />
         <Container className="container-fluid">
           <Header />
-          <div className="row">
+          <div className="row" style={{ paddingTop: 13 }}>
             <div className="col-md-12 col-lg-9">
               {formattedContentTypeLayout.map((block, blockIndex) => {
                 if (isDynamicZone(block)) {
@@ -273,7 +273,8 @@ const EditView = ({
                     currentEnvironment,
                     slug,
                     source,
-                    emitEvent
+                    emitEvent,
+                    true
                   )}
                 </ul>
               </LinkWrapper>
