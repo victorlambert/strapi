@@ -152,7 +152,7 @@ const EditView = ({
         <BackHeader onClick={() => redirectToPreviousPage()} />
         <Container className="container-fluid">
           <Header />
-          <div className="row">
+          <div className="row" style={{ paddingTop: 13 }}>
             <div className="col-md-12 col-lg-9">
               {formattedContentTypeLayout.map((block, blockIndex) => {
                 if (isDynamicZone(block)) {
@@ -285,7 +285,8 @@ const EditView = ({
                     currentEnvironment,
                     slug,
                     source,
-                    emitEvent
+                    emitEvent,
+                    true
                   )}
                 </ul>
               </LinkWrapper>

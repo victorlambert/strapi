@@ -4,11 +4,13 @@ import { connect } from 'react-redux';
 import { bindActionCreators, compose } from 'redux';
 import { capitalize, get, sortBy } from 'lodash';
 import { FormattedMessage } from 'react-intl';
+import { Header } from '@buffetjs/custom';
 import {
-  PluginHeader,
   PopUpWarning,
   getQueryParameters,
+  useGlobalContext,
 } from 'strapi-helper-plugin';
+
 import pluginId from '../../pluginId';
 import DisplayedFieldsDropdown from '../../components/DisplayedFieldsDropdown';
 import FilterLogo from '../../assets/images/icon_filter.png';
@@ -47,7 +49,6 @@ function ListView({
   location: { pathname, search },
   getData,
   layouts,
-  isLoading,
   history: { push },
   onChangeBulk,
   onChangeBulkSelectall,
@@ -65,7 +66,7 @@ function ListView({
 }) {
   strapi.useInjectReducer({ key: 'listView', reducer, pluginId });
   strapi.useInjectSaga({ key: 'listView', saga, pluginId });
-
+  const { formatMessage } = useGlobalContext();
   const getLayoutSettingRef = useRef();
   const [isLabelPickerOpen, setLabelPickerState] = useState(false);
   const [isFilterPickerOpen, setFilterPickerState] = useState(false);
@@ -217,14 +218,17 @@ function ListView({
       type: 'submit',
     },
   ];
-  const pluginHeaderActions = [
+
+  const headerAction = [
     {
-      id: 'addEntry',
-      label: 'content-manager.containers.List.addAnEntry',
-      labelValues: {
-        entity: capitalize(slug) || 'Content Manager',
-      },
-      kind: 'primaryAddShape',
+      title: formatMessage(
+        {
+          id: 'content-manager.containers.List.addAnEntry',
+        },
+        {
+          entity: capitalize(slug) || 'Content Manager',
+        }
+      ),
       onClick: () => {
         emitEvent('willCreateEntry');
         push({
@@ -232,8 +236,27 @@ function ListView({
           search: `redirectUrl=${pathname}${search}`,
         });
       },
+      color: 'primary',
+      type: 'button',
+      icon: true,
     },
   ];
+
+  const headerProps = {
+    title: {
+      label: slug || 'Content Manager',
+    },
+    content: formatMessage(
+      {
+        id:
+          count > 1
+            ? `${pluginId}.containers.List.pluginHeaderDescription`
+            : `${pluginId}.containers.List.pluginHeaderDescription.singular`,
+      },
+      { label: count }
+    ),
+    actions: headerAction,
+  };
 
   return (
     <>
@@ -261,24 +284,7 @@ function ListView({
           onSubmit={handleSubmit}
         />
         <Container className="container-fluid">
-          {!isFilterPickerOpen && (
-            <PluginHeader
-              actions={pluginHeaderActions}
-              description={{
-                id:
-                  count > 1
-                    ? `${pluginId}.containers.List.pluginHeaderDescription`
-                    : `${pluginId}.containers.List.pluginHeaderDescription.singular`,
-                values: {
-                  label: count,
-                },
-              }}
-              title={{
-                id: slug || 'Content Manager',
-              }}
-              withDescriptionAnim={isLoading}
-            />
-          )}
+          {!isFilterPickerOpen && <Header {...headerProps} />}
           {getLayoutSettingRef.current('searchable') && (
             <Search
               changeParams={handleChangeParams}
@@ -288,7 +294,7 @@ function ListView({
             />
           )}
           <Wrapper>
-            <div className="row" style={{ marginBottom: '6px' }}>
+            <div className="row" style={{ marginBottom: '5px' }}>
               <div className="col-10">
                 <div className="row" style={{ marginLeft: 0, marginRight: 0 }}>
                   {getLayoutSettingRef.current('filterable') && (
@@ -403,7 +409,6 @@ ListView.propTypes = {
     search: PropTypes.string.isRequired,
   }),
   getData: PropTypes.func.isRequired,
-  isLoading: PropTypes.bool.isRequired,
   history: PropTypes.shape({
     push: PropTypes.func.isRequired,
   }),

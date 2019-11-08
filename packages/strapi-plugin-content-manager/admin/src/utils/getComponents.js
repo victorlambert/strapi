@@ -1,6 +1,6 @@
 import React from 'react';
 import { get } from 'lodash';
-import pluginId from '../../../pluginId';
+import pluginId from '../pluginId';
 
 /**
  * Retrieve external links from injected components
