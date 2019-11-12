@@ -1,14 +1,15 @@
 import React from 'react';
 import formatMessagesWithPluginId from 'testUtils/formatMessages';
-import pluginTradsEn from '../../../translations/en.json';
+import mountWithIntl from 'testUtils/mountWithIntl';
 import { BrowserRouter } from 'react-router-dom';
+import { LeftMenuList } from 'strapi-helper-plugin';
 
+import pluginTradsEn from '../../../translations/en.json';
 import MenuContext from '../../MenuContext';
-import LeftMenuLink from '../../../components/LeftMenuLink';
-import LeftMenu, { getSectionTitle } from '../index';
+
+import LeftMenu from '../index';
 
 import pluginId from '../../../pluginId';
-import mountWithIntl from 'testUtils/mountWithIntl';
 
 // @soupette
 // TODO update the test when switching to react testing lib
@@ -126,18 +127,12 @@ describe('CTB <LeftMenu />', () => {
     });
 
     describe('Render links', () => {
-      it('should render 5 links in the menu', () => {
+      it('should render 2 lists in the menu', () => {
         topCompo = renderComponent();
-        const links = topCompo.find(LeftMenuLink);
+        const links = topCompo.find(LeftMenuList);
 
-        expect(links).toHaveLength(5);
+        expect(links).toHaveLength(2);
       });
-    });
-  });
-
-  describe('Retrieve section title', () => {
-    it('should return a plural string for the user', () => {
-      expect(getSectionTitle('model', [])).toContain('singular');
     });
   });
 });

@@ -6,32 +6,69 @@
 
 import React, { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
-import { StyledLeftMenu } from 'strapi-helper-plugin';
+import { groupBy } from 'lodash';
 
-import cn from 'classnames';
+import { LeftMenuList } from 'strapi-helper-plugin';
 
 import pluginId from '../../pluginId';
 
-import CustomLink from '../../components/CustomLink';
-import DocumentationSection from '../../components/DocumentationSection';
 import MenuContext from '../../containers/MenuContext';
-import LeftMenuLink from '../../components/LeftMenuLink';
+import CustomLink from '../../components/CustomLink';
+import Wrapper from './Wrapper';
 
-const displayNotificationCTNotSaved = () =>
+const displayNotificationCTNotSaved = () => {
   strapi.notification.info(
     `${pluginId}.notification.info.contentType.creating.notSaved`
   );
-
-const getSectionTitle = (itemsTitle, count) => {
-  const base = `${pluginId}.menu.section.${itemsTitle}.name.`;
-
-  return count > 1 ? `${base}plural` : `${base}singular`;
 };
 
 function LeftMenu() {
   const { canOpenModal, groups, models, push } = useContext(MenuContext);
 
-  const handleClickOpenModalCreateCT = type => {
+  const getComponents = () => {
+    // TODO : Replace groupsBy param with category when available
+    const componentsObj = groupBy(groups, 'uid');
+
+    return Object.keys(componentsObj).map(key => {
+      const links = [
+        ...componentsObj[key].map(compo => {
+          return {
+            ...compo,
+            to: getLinkRoute('components', compo, key),
+            title: getLinkTitle(compo),
+          };
+        }),
+      ];
+
+      return { name: key, links };
+    });
+  };
+
+  const notSavedLabel = () => {
+    return <FormattedMessage id={`${pluginId}.contentType.temporaryDisplay`} />;
+  };
+
+  const getLinkRoute = (param, item, category = null) => {
+    const { name, source, uid } = item;
+
+    const cat = category ? `${category}/` : '';
+    const base = `/plugins/${pluginId}/${param}/${cat}${uid || name}`;
+    const to = source ? `${base}&source=${source}` : base;
+
+    return to;
+  };
+
+  const getLinkTitle = item => {
+    const { name, isTemporary } = item;
+    return (
+      <p>
+        <span>{name}</span>
+        {isTemporary && notSavedLabel()}
+      </p>
+    );
+  };
+
+  const openCreateModal = type => {
     if (canOpenModal) {
       push({
         search: `modalType=${type}&settingType=base&actionType=create`,
@@ -41,67 +78,56 @@ function LeftMenu() {
     }
   };
 
-  const renderLinks = (param, items) => {
-    const links = items.map(item => {
-      const { isTemporary, name, source, uid } = item;
-      const base = `/plugins/${pluginId}/${param}/${uid || name}`;
-      const to = source ? `${base}&source=${source}` : base;
+  const getModels = [
+    ...models.map(model => {
+      return {
+        ...model,
+        to: getLinkRoute('models', model),
+        title: getLinkTitle(model),
+      };
+    }),
+  ];
 
-      return (
-        <li key={name}>
-          <LeftMenuLink
-            isTemporary={isTemporary}
-            name={name}
-            source={source}
-            to={to}
-          />
-        </li>
-      );
-    });
-    return links;
-  };
+  const data = [
+    {
+      name: 'models',
+      title: {
+        id: `${pluginId}.menu.section.models.name.`,
+      },
+      searchable: true,
+      customLink: {
+        Component: CustomLink,
+        componentProps: {
+          id: `${pluginId}.button.model.create`,
+          onClick: () => openCreateModal('model'),
+        },
+      },
+      links: getModels,
+    },
+    {
+      name: 'components',
+      title: {
+        id: `${pluginId}.menu.section.components.name.`,
+      },
+      searchable: true,
+      customLink: {
+        Component: CustomLink,
+        componentProps: {
+          id: `${pluginId}.button.component.create`,
+          onClick: () => openCreateModal('group'),
+        },
+      },
+      links: getComponents(),
+    },
+  ];
 
   return (
-    <StyledLeftMenu className={cn('col-md-3')}>
-      <section>
-        <h3>
-          <FormattedMessage id={getSectionTitle('models', models.length)} />
-        </h3>
-        <ul className="menu-list">
-          {renderLinks('models', models)}
-          <li>
-            <CustomLink
-              featureType="contentType"
-              onClick={() => handleClickOpenModalCreateCT('model')}
-            />
-          </li>
-        </ul>
-      </section>
-      <section>
-        <h3>
-          <FormattedMessage id={getSectionTitle('groups', groups.length)} />
-        </h3>
-        <ul className="menu-list">
-          {renderLinks('groups', groups)}
-          <li>
-            <CustomLink
-              featureType="group"
-              onClick={() => handleClickOpenModalCreateCT('group')}
-            />
-          </li>
-        </ul>
-      </section>
-      <section>
-        <h3>
-          <FormattedMessage
-            id={`${pluginId}.menu.section.documentation.name`}
-          />
-        </h3>
-        <DocumentationSection />
-      </section>
-    </StyledLeftMenu>
+    <Wrapper className="col-md-3">
+      {data.map(list => {
+        return <LeftMenuList {...list} key={list.name}></LeftMenuList>;
+      })}
+    </Wrapper>
   );
 }
 
 export default LeftMenu;
-export { getSectionTitle };
