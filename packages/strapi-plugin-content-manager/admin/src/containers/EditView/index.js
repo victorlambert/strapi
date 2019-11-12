@@ -20,11 +20,13 @@ import SelectWrapper from '../../components/SelectWrapper';
 import EditViewDataManagerProvider from '../EditViewDataManagerProvider';
 import EditViewProvider from '../EditViewProvider';
 import Header from './Header';
+
 import getInjectedComponents from '../../utils/getComponents';
+import createAttributesLayout from './utils/createAttributesLayout';
+
+import { LinkWrapper, SubWrapper } from './components';
 import init from './init';
 import reducer, { initialState } from './reducer';
-import { LinkWrapper, SubWrapper } from './components';
-import createAttributesLayout from './utils/createAttributesLayout';
 
 const EditView = ({
   currentEnvironment,
@@ -161,8 +163,16 @@ const EditView = ({
                       0: { name },
                     },
                   } = block;
+                  const { max, min } = getField(name);
 
-                  return <DynamicZone key={blockIndex} name={name} />;
+                  return (
+                    <DynamicZone
+                      key={blockIndex}
+                      name={name}
+                      max={max}
+                      min={min}
+                    />
+                  );
                 }
 
                 return (
@@ -181,6 +191,8 @@ const EditView = ({
                                 'repeatable',
                                 false
                               );
+                              const { max, min } = getField(name);
+
                               const label = get(
                                 getFieldMetas(name),
                                 'label',
@@ -193,6 +205,8 @@ const EditView = ({
                                   componentUid={componentUid}
                                   isRepeatable={isRepeatable}
                                   label={label}
+                                  max={max}
+                                  min={min}
                                   name={name}
                                 />
                               );

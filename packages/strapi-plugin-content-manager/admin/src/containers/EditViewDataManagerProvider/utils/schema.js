@@ -26,7 +26,11 @@ const createYupSchema = (model, { components }) => {
   return yup.object().shape(
     Object.keys(attributes).reduce((acc, current) => {
       const attribute = attributes[current];
-      if (attribute.type !== 'relation' && attribute.type !== 'component') {
+      if (
+        attribute.type !== 'relation' &&
+        attribute.type !== 'component' &&
+        attribute.type !== 'dynamiczone'
+      ) {
         const formatted = createYupSchemaAttribute(attribute.type, attribute);
         acc[current] = formatted;
       }
@@ -52,7 +56,9 @@ const createYupSchema = (model, { components }) => {
         );
 
         if (attribute.repeatable === true) {
-          const componentSchema =
+          const { min, max } = attribute;
+
+          let componentSchema =
             attribute.required === true
               ? yup
                   .array()
@@ -62,6 +68,14 @@ const createYupSchema = (model, { components }) => {
                   .array()
                   .of(componentFieldSchema)
                   .nullable();
+
+          if (min) {
+            componentSchema = componentSchema.min(min, errorsTrads.min);
+          }
+
+          if (max) {
+            componentSchema = componentSchema.max(max, errorsTrads.max);
+          }
 
           acc[current] = componentSchema;
 
@@ -85,10 +99,34 @@ const createYupSchema = (model, { components }) => {
         }
       }
 
+      if (attribute.type === 'dynamiczone') {
+        let dynamicZoneSchema = yup.array().of(
+          yup.lazy(({ __component }) => {
+            return createYupSchema(components[__component], { components });
+          })
+        );
+        const { max, min } = attribute;
+
+        if (attribute.required) {
+          dynamicZoneSchema = dynamicZoneSchema.defined();
+        }
+
+        if (min) {
+          dynamicZoneSchema = dynamicZoneSchema.min(min, errorsTrads.min);
+        }
+
+        if (max) {
+          dynamicZoneSchema = dynamicZoneSchema.max(max, errorsTrads.max);
+        }
+
+        acc[current] = dynamicZoneSchema;
+      }
+
       return acc;
     }, {})
   );
 };
+
 const createYupSchemaAttribute = (type, validations) => {
   let schema = yup.mixed();
   if (

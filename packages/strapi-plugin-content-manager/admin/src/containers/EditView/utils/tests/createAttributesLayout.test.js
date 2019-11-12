@@ -1,4 +1,4 @@
-import createAttributesLayout from '../utils/createAttributesLayout';
+import createAttributesLayout from '../createAttributesLayout';
 
 describe('Content Manager | EditView | utils | createAttributesLayout', () => {
   it('Should return an array of size 1 if there is no dynamic zone', () => {

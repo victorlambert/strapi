@@ -1,10 +1,11 @@
 import { get } from 'lodash';
 
-const setDefaultForm = attributes => {
+const createDefaultForm = (attributes, allComponentsSchema) => {
   return Object.keys(attributes).reduce((acc, current) => {
     const attribute = get(attributes, [current], {});
     const {
       default: defaultValue,
+      component,
       type,
       required,
       min,
@@ -24,6 +25,16 @@ const setDefaultForm = attributes => {
     }
 
     if (type === 'component') {
+      const currentComponentSchema = get(
+        allComponentsSchema,
+        [component, 'schema', 'attributes'],
+        {}
+      );
+      const currentComponentDefaultForm = createDefaultForm(
+        currentComponentSchema,
+        allComponentsSchema
+      );
+
       if (required === true) {
         acc[current] = repeatable === true ? [] : {};
       }
@@ -32,7 +43,7 @@ const setDefaultForm = attributes => {
         acc[current] = [];
 
         for (let i = 0; i < min; i++) {
-          acc[current].push({ _temp__id: i });
+          acc[current].push(currentComponentDefaultForm);
         }
       }
     }
@@ -41,4 +52,4 @@ const setDefaultForm = attributes => {
   }, {});
 };
 
-export default setDefaultForm;
+export default createDefaultForm;

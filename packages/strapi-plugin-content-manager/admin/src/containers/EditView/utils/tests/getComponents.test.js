@@ -1,6 +1,6 @@
 import React from 'react';
 import { shallow } from 'enzyme';
-import getComponents from '../utils/getComponents';
+import getComponents from '../getComponents';
 
 describe('Content Manager | EditView | utils | getComponents', () => {
   it('should not crash', () => {

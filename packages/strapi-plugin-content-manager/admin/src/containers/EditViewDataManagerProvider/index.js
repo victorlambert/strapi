@@ -1,7 +1,7 @@
 import React, { useEffect, useReducer } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { get } from 'lodash';
+import { cloneDeep, get, isEmpty, set } from 'lodash';
 import {
   getQueryParameters,
   request,
@@ -10,6 +10,10 @@ import {
 import pluginId from '../../pluginId';
 import EditViewDataManagerContext from '../../contexts/EditViewDataManager';
 import createYupSchema from './utils/schema';
+import createDefaultForm from './utils/createDefaultForm';
+import getFilesToUpload from './utils/getFilesToUpload';
+import cleanData from './utils/cleanData';
+import getYupInnerErrors from './utils/getYupInnerErrors';
 import init from './init';
 import reducer, { initialState } from './reducer';
 
@@ -31,6 +35,7 @@ const EditViewDataManagerProvider = ({
     isLoading,
     modifiedData,
     shouldShowLoadingState,
+    shouldCheckErrors,
   } = reducerState.toJS();
 
   const currentContentTypeLayout = get(allLayoutData, ['contentType'], {});
@@ -38,6 +43,13 @@ const EditViewDataManagerProvider = ({
   const { signal } = abortController;
   const isCreatingEntry = id === 'create';
   const source = getQueryParameters(search, 'source');
+
+  useEffect(() => {
+    if (!isLoading) {
+      checkFormErrors();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldCheckErrors]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,14 +71,36 @@ const EditViewDataManagerProvider = ({
       }
     };
 
+    const componentsDataStructure = Object.keys(
+      allLayoutData.components
+    ).reduce((acc, current) => {
+      acc[current] = createDefaultForm(
+        get(allLayoutData, ['components', current, 'schema', 'attributes'], {}),
+        allLayoutData.components
+      );
+      return acc;
+    }, {});
+    const contentTypeDataStructure = createDefaultForm(
+      currentContentTypeLayout.schema.attributes,
+      allLayoutData.components
+    );
+
     // Force state to be cleared when navigation from one entry to another
     dispatch({ type: 'RESET_PROPS' });
+    dispatch({
+      type: 'SET_DEFAULT_DATA_STRUCTURES',
+      componentsDataStructure,
+      contentTypeDataStructure,
+    });
 
     if (!isCreatingEntry) {
       fetchData();
     } else {
       // Will create default form
-      console.log('will create default form');
+      dispatch({
+        type: 'SET_DEFAULT_MODIFIED_DATA_STRUCTURE',
+        contentTypeDataStructure,
+      });
     }
 
     return () => {
@@ -75,11 +109,16 @@ const EditViewDataManagerProvider = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, slug, source]);
 
-  const addComponentToDynamicZone = (keys, componentUid) => {
+  const addComponentToDynamicZone = (
+    keys,
+    componentUid,
+    shouldCheckErrors = false
+  ) => {
     dispatch({
       type: 'ADD_COMPONENT_TO_DYNAMIC_ZONE',
       keys: keys.split('.'),
       componentUid,
+      shouldCheckErrors,
     });
   };
 
@@ -99,10 +138,40 @@ const EditViewDataManagerProvider = ({
     });
   };
 
-  const addRepeatableComponentToField = keys => {
+  const addRepeatableComponentToField = (
+    keys,
+    componentUid,
+    shouldCheckErrors = false
+  ) => {
     dispatch({
       type: 'ADD_REPEATABLE_COMPONENT_TO_FIELD',
       keys: keys.split('.'),
+      componentUid,
+      shouldCheckErrors,
+    });
+  };
+
+  const checkFormErrors = async (dataToSet = {}) => {
+    const schema = createYupSchema(currentContentTypeLayout, {
+      components: get(allLayoutData, 'components', {}),
+    });
+    let errors = {};
+    const updatedData = cloneDeep(modifiedData);
+
+    if (!isEmpty(updatedData)) {
+      set(updatedData, dataToSet.path, dataToSet.value);
+    }
+
+    try {
+      // Validate the form using yup
+      await schema.validate(updatedData, { abortEarly: false });
+    } catch (err) {
+      errors = getYupInnerErrors(err);
+    }
+
+    dispatch({
+      type: 'SET_ERRORS',
+      errors,
     });
   };
 
@@ -125,6 +194,7 @@ const EditViewDataManagerProvider = ({
   const handleSubmit = async e => {
     e.preventDefault();
 
+    // Create yup schema
     const schema = createYupSchema(currentContentTypeLayout, {
       components: get(allLayoutData, 'components', {}),
     });
@@ -133,28 +203,70 @@ const EditViewDataManagerProvider = ({
       // Validate the form using yup
       await schema.validate(modifiedData, { abortEarly: false });
       // Set the loading state in the plugin header
-      setIsSubmitting();
-    } catch (err) {
-      const errors = get(err, 'inner', []).reduce((acc, curr) => {
-        acc[
-          curr.path
-            .split('[')
-            .join('.')
-            .split(']')
-            .join('')
-        ] = { id: curr.message };
+      const filesToUpload = getFilesToUpload(modifiedData);
+      // Remove keys that are not needed
+      // Clean relations
+      const cleanedData = cleanData(
+        cloneDeep(modifiedData),
+        currentContentTypeLayout,
+        allLayoutData.components
+      );
 
-        return acc;
-      }, {});
+      const formData = new FormData();
+
+      formData.append('data', JSON.stringify(cleanedData));
+
+      Object.keys(filesToUpload).forEach(key => {
+        const files = filesToUpload[key];
+
+        files.forEach(file => {
+          formData.append(`files.${key}`, file);
+        });
+      });
+
+      // Change the request helper default headers so we can pass a FormData
+      const headers = {};
+      const method = isCreatingEntry ? 'POST' : 'PUT';
+      const endPoint = isCreatingEntry ? slug : `${slug}/${id}`;
+
+      try {
+        // Time to actually send the data
+        await request(
+          getRequestUrl(endPoint),
+          {
+            method,
+            headers,
+            params: { source },
+            body: formData,
+            signal,
+          },
+          false,
+          false
+        );
+        // emitEvent('didSaveEntry');
+        redirectToPreviousPage();
+      } catch (err) {
+        console.log({ err });
+        const error = get(
+          err,
+          ['response', 'payload', 'message', '0', 'messages', '0', 'id'],
+          'SERVER ERROR'
+        );
+
+        setIsSubmitting(false);
+        // emitEvent('didNotSaveEntry', { error: err });
+        strapi.notification.error(error);
+      }
+
+      // setIsSubmitting();
+    } catch (err) {
+      const errors = getYupInnerErrors(err);
+
       dispatch({
         type: 'SUBMIT_ERRORS',
         errors,
       });
-      console.log({ errors });
     }
-    // dispatch({
-    //   type: 'SUBMIT_SUCCEEDED',
-    // });
   };
 
   const moveComponentDown = (dynamicZoneName, currentIndex) => {
@@ -234,6 +346,7 @@ const EditViewDataManagerProvider = ({
         addRelation,
         addRepeatableComponentToField,
         allLayoutData,
+        checkFormErrors,
         formErrors,
         initialData,
         layout: currentContentTypeLayout,

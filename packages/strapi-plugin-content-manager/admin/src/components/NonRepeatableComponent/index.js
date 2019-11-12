@@ -21,7 +21,7 @@ const NonRepeatableComponent = ({
       {fields.map((fieldRow, key) => {
         return (
           <div className="row" key={key}>
-            {fieldRow.map(field => {
+            {fieldRow.map((field, i) => {
               const currentField = getField(field.name);
               const isComponent = get(currentField, 'type', '') === 'component';
               const keys = `${name}.${field.name}`;
@@ -36,6 +36,8 @@ const NonRepeatableComponent = ({
                     componentUid={componentUid}
                     isRepeatable={currentField.repeatable}
                     label={metas.label}
+                    max={currentField.max}
+                    min={currentField.min}
                     name={keys}
                   />
                 );
@@ -44,7 +46,7 @@ const NonRepeatableComponent = ({
               return (
                 <div key={field.name} className={`col-${field.size}`}>
                   <Inputs
-                    autoFocus={false}
+                    autoFocus={key === 0 && i === 0 && isFromDynamicZone}
                     keys={keys}
                     layout={schema}
                     name={field.name}

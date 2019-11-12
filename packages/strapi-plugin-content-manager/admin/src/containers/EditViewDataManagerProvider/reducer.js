@@ -1,45 +1,69 @@
-import {
-  fromJS,
-  // List,
-} from 'immutable';
+import { fromJS } from 'immutable';
 
 const initialState = fromJS({
+  componentsDataStructure: {},
+  contentTypeDataStructure: {},
   formErrors: {},
   isLoading: true,
   initialData: {},
   modifiedData: {},
   shouldShowLoadingState: false,
+  shouldCheckErrors: false,
 });
 
 const reducer = (state, action) => {
   switch (action.type) {
     case 'ADD_NON_REPEATABLE_COMPONENT_TO_FIELD':
       return state.updateIn(['modifiedData', ...action.keys], () => {
-        return fromJS({});
+        const defaultDataStructure = state.getIn([
+          'componentsDataStructure',
+          action.componentUid,
+        ]);
+
+        return fromJS(defaultDataStructure);
       });
     case 'ADD_REPEATABLE_COMPONENT_TO_FIELD': {
-      return state.updateIn(['modifiedData', ...action.keys], list => {
-        const defaultAttribute = fromJS({});
+      return state
+        .updateIn(['modifiedData', ...action.keys], list => {
+          const defaultDataStructure = state.getIn([
+            'componentsDataStructure',
+            action.componentUid,
+          ]);
 
-        if (list) {
-          return list.push(defaultAttribute);
-        }
+          if (list) {
+            return list.push(defaultDataStructure);
+          }
 
-        return fromJS([defaultAttribute]);
-      });
+          return fromJS([defaultDataStructure]);
+        })
+        .update('shouldCheckErrors', v => {
+          if (action.shouldCheckErrors === true) {
+            return !v;
+          }
+
+          return v;
+        });
     }
     case 'ADD_COMPONENT_TO_DYNAMIC_ZONE':
-      return state.updateIn(['modifiedData', ...action.keys], list => {
-        const componentToAdd = fromJS({
-          __component: action.componentUid,
+      return state
+        .updateIn(['modifiedData', ...action.keys], list => {
+          const defaultDataStructure = state
+            .getIn(['componentsDataStructure', action.componentUid])
+            .set('__component', action.componentUid);
+
+          if (list) {
+            return list.push(defaultDataStructure);
+          }
+
+          return fromJS([defaultDataStructure]);
+        })
+        .update('shouldCheckErrors', v => {
+          if (action.shouldCheckErrors === true) {
+            return !v;
+          }
+
+          return v;
         });
-
-        if (list) {
-          return list.push(componentToAdd);
-        }
-
-        return fromJS([componentToAdd]);
-      });
     case 'ADD_RELATION':
       return state.updateIn(['modifiedData', ...action.keys], list => {
         if (!action.value) {
@@ -153,6 +177,20 @@ const reducer = (state, action) => {
 
     case 'RESET_PROPS':
       return initialState;
+    case 'SET_DEFAULT_DATA_STRUCTURES':
+      return state
+        .update('componentsDataStructure', () =>
+          fromJS(action.componentsDataStructure)
+        )
+        .update('contentTypeDataStructure', () =>
+          fromJS(action.contentTypeDataStructure)
+        );
+    case 'SET_DEFAULT_MODIFIED_DATA_STRUCTURE':
+      return state
+        .update('isLoading', () => false)
+        .update('modifiedData', () => fromJS(action.contentTypeDataStructure));
+    case 'SET_ERRORS':
+      return state.update('formErrors', () => fromJS(action.errors));
     case 'SUBMIT_ERRORS':
       return state
         .update('formErrors', () => fromJS(action.errors))
